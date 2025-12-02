@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstroSandra</title>
+
+    <!-- CSS bundle -->
+    <link rel="stylesheet" href="https://embedded.unith.ai/dist/bundle.css" />
+
+    <!-- Fonts -->
+    <link rel="stylesheet"
+          href="https://gpt-head-assets.unith.ai/fonts/stylesheet.css"
+          media="print"
+          onload="this.media='all'"
+    />
+
+    <!-- Microsoft speech recognition -->
+    <script src="https://embedded.unith.ai/microsoft-speech-recognition.js"></script>
+
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 15px;
+            box-sizing: border-box;
+            font-family: sans-serif;
+        }
+
+        p {
+            text-align: center;
+        }
+
+        body > p {
+            padding: 0 30%;
+        }
+
+        /* Container where the widget will be injected */
+        #widget-container {
+            width: 100%;
+            height: 100%;
+            display: none;
+            position: relative; /* For absolute positioning of children */
+        }
+
+        /* Widget styling */
+        #talking-head {
+            width: 100%;
+            height: 100%;
+            resize: both;
+            overflow: auto;
+            box-shadow: 2px 2px 14px -2px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            background-color: antiquewhite;
+        }
+
+        /* --- Language Switcher Styles --- */
+        #lang-switcher {
+            position: sticky;
+            top: 10px;
+            right: 10px;
+            z-index: 9999; /* Ensure it sits above the widget */
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #lang-switcher select {
+            padding: 5px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Login Overlay */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .login-box {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .login-box input {
+            display: block;
+            margin: 10px auto;
+            padding: 8px;
+            width: 200px;
+        }
+        .login-box button {
+            padding: 8px 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- 1. Login UI -->
+<div id="login-overlay">
+    <div class="login-box">
+        <h2>Login Required</h2>
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="attemptLogin()">Enter</button>
+        <p id="error-msg" style="color: red; display: none; margin-top: 10px;">Invalid Credentials</p>
+    </div>
+</div>
+
+<!-- 2. Widget Container + Language Switcher -->
+<div id="widget-container">
+    <div id="lang-switcher">
+        <select id="language-select" onchange="changeLanguage(this.value)">
+            <option value="en-US">English (US)</option>
+            <option value="de-DE">Deutsch</option>
+            <option value="ro-RO">Română</option>
+        </select>
+    </div>
+    <!-- Widget DIV will be injected here via JS -->
+</div>
+
+<script>
+    const USER_SET = "__USER__";
+    const PASS_HASH = "__PASSWORD_HASH__";
+
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function changeLanguage(lang) {
+        const url = new URL(window.location);
+        url.searchParams.set('lang', lang);
+        window.location.href = url.toString();
+    }
+
+    async function attemptLogin() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+        const inputHash = await sha256(p);
+        console.log(inputHash);
+
+        if (u === USER_SET && inputHash === PASS_HASH) {
+            sessionStorage.setItem('isLoggedIn', 'true');
+            initializeApplication();
+        } else {
+            document.getElementById('error-msg').style.display = 'block';
+        }
+    }
+
+    if (sessionStorage.getItem('isLoggedIn') === 'true') {
+        initializeApplication();
+    }
+
+    function initializeApplication() {
+        document.getElementById('login-overlay').style.display = 'none';
+        const container = document.getElementById('widget-container');
+        container.style.display = 'block';
+
+        const params = new URLSearchParams(window.location.search);
+        const language = params.get('lang') || 'en-US';
+
+        const widgetDiv = document.createElement('div');
+        widgetDiv.id = 'talking-head';
+
+        widgetDiv.setAttribute('data-api_base', "https://chat-origin.api.unith.live");
+        widgetDiv.setAttribute('data-api_key', "__API_KEY__");
+        widgetDiv.setAttribute('data-org_id', "__ORG_ID__");
+        widgetDiv.setAttribute('data-head_id', "__HEAD_ID__");
+        widgetDiv.setAttribute('data-theme', "demo");
+        widgetDiv.setAttribute('data-vm_version', "1");
+        widgetDiv.setAttribute('data-time_pressure', "false");
+        widgetDiv.setAttribute('data-subs_enabled', "true");
+        widgetDiv.setAttribute('data-mic_enabled', "true");
+        widgetDiv.setAttribute('data-widget_mode', "false");
+        widgetDiv.setAttribute('data-seamless_transitions', "false");
+        widgetDiv.setAttribute('data-language', language);
+
+        // Optional: Client-side welcome message logic
+        let welcomeMsg = "Welcome. The cosmos listens.";
+        let welcomeButtonText = "What do you seek?";
+        if(language === 'de-DE'){
+            welcomeMsg = "Willkommen. Der Kosmos hört zu.";
+            welcomeButtonText = "Was liegt dir auf dem Herzen?";
+        }
+        if(language === 'ro-RO') {
+            welcomeMsg = "Bun venit. Cosmosul e pregătit.";
+            welcomeButtonText = "Ce ai pe suflet?";
+        }
+
+        widgetDiv.setAttribute('data-welcome_message', welcomeMsg);
+        widgetDiv.setAttribute('data-welcome_button_text', welcomeButtonText);
+
+        container.appendChild(widgetDiv);
+
+        const script = document.createElement('script');
+        script.src = "https://embedded.unith.ai/dist/bundle.js";
+        script.defer = true;
+        document.body.appendChild(script);
+    }
+</script>
+</body>
+</html>
