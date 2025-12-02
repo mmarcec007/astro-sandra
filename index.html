@@ -159,7 +159,6 @@
         const u = document.getElementById('username').value;
         const p = document.getElementById('password').value;
         const inputHash = await sha256(p);
-        console.log(inputHash);
 
         if (u === USER_SET && inputHash === PASS_HASH) {
             sessionStorage.setItem('isLoggedIn', 'true');
