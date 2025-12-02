@@ -180,6 +180,11 @@
         const params = new URLSearchParams(window.location.search);
         const language = params.get('lang') || 'en-US';
 
+        const langSelect = document.getElementById('language-select');
+        if (langSelect) {
+            langSelect.value = language;
+        }
+
         const widgetDiv = document.createElement('div');
         widgetDiv.id = 'talking-head';
 
